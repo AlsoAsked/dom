@@ -26,6 +26,22 @@ func FastParse(r io.Reader) (*html.Node, error) {
 // has to detect charset before parsing, this function is quite slow and expensive
 // so if you sure the reader uses valid UTF-8, just use FastParse.
 func Parse(r io.Reader) (*html.Node, error) {
+	r, err := transformHtml(r)
+	if err != nil {
+		return nil, err
+	}
+	return html.Parse(r)
+}
+
+func ParseFragment(r io.Reader, context *html.Node) ([]*html.Node, error) {
+	r, err := transformHtml(r)
+	if err != nil {
+		return nil, err
+	}
+	return html.ParseFragment(r, context)
+}
+
+func transformHtml(r io.Reader) (io.Reader, error) {
 	// Split the reader using tee
 	content, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -46,8 +62,7 @@ func Parse(r io.Reader) (*html.Node, error) {
 	// Parse HTML using the page encoding
 	r = bytes.NewReader(content)
 	r = transform.NewReader(r, pageEncoding.NewDecoder())
-	r = normalizeTextEncoding(r)
-	return html.Parse(r)
+	return normalizeTextEncoding(r), nil
 }
 
 // normalizeTextEncoding convert text encoding from NFD to NFC.
